@@ -39,6 +39,17 @@ static inline void ssd1306_spi_write_byte(uint8_t data) {
 	//HAL_SPI_Transmit(&hspi1, &data, 1, 10);
 }
 
+static inline void ssd1306_spi_set_dma_source(uint8_t *source_addr, uint32_t length) {
+    LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_3, (uint32_t)source_addr);
+    LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, length);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
+}
+
+static inline void ssd1306_spi_init_dma() {
+    LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_3, (uint32_t)(&SPI1->DR));
+    LL_SPI_EnableDMAReq_TX(SPI1);
+}
+
 #define _SSD1306_SET_RST_HIGH() ssd1306_set_rst_high()
 #define _SSD1306_SET_RST_LOW() ssd1306_set_rst_low()
 

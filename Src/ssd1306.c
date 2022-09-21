@@ -50,7 +50,16 @@ void ssd1306_init_device() {
     _SSD1306_SET_RST_HIGH();
 
     for (uint8_t i = 0; i < sizeof(ssd1306_init_commands); ++i){
-    	_SSD1306_SPI_WRITE_BYTE(ssd1306_init_commands[i]);
+    	//_SSD1306_SPI_WRITE_BYTE(ssd1306_init_commands[i]);
     }
+    ssd1306_spi_init_dma();
+    ssd1306_spi_set_dma_source((uint8_t*)ssd1306_init_commands, sizeof(ssd1306_init_commands));
+}
+
+void ssd1306_commit_command_buffer(ssd1306_command_buffer_t *command_buffer){
+    if (command_buffer->dc)
+        _SSD1306_SET_DC_HIGH();
+    else
+        _SSD1306_SET_DC_LOW();
 }
 
