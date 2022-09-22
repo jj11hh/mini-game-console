@@ -81,10 +81,8 @@ ssd1306_command_buffer_t *ssd1306_alloc_command_buffer();
 void ssd1306_release_command_buffer(ssd1306_command_buffer_t *);
 
 // Execute a single command buffer. User manages its memory
-void ssd1306_commit_command_buffer(ssd1306_command_buffer_t *command_buffer);
-
-// Execute and release all command buffer in list
-void ssd1306_commit_command_buffer_list(ssd1306_command_buffer_list_t *list);
+void ssd1306_submit_command_buffer(ssd1306_command_buffer_t *command_buffer);
+void ssd1306_spi_dma_handle_irq();
 void ssd1306_init_device();
 
 #endif //MINIGAMECONSOLE_SSD1306_H

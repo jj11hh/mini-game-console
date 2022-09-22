@@ -39,9 +39,14 @@ static const uint8_t ssd1306_init_commands[] = {
 		0xAF, // Display ON
 };
 
+static volatile ssd1306_command_buffer_t current_commands;
+
+// 0 for complete
+static volatile uint8_t transmit_complete;
+
 void ssd1306_init_device() {
-    // Send command
-    _SSD1306_SET_DC_LOW();
+    // Clear complete flag
+    transmit_complete = 0u;
 
     // Reset device
     _SSD1306_SET_RST_LOW();
@@ -49,17 +54,43 @@ void ssd1306_init_device() {
 
     _SSD1306_SET_RST_HIGH();
 
-    for (uint8_t i = 0; i < sizeof(ssd1306_init_commands); ++i){
-    	//_SSD1306_SPI_WRITE_BYTE(ssd1306_init_commands[i]);
-    }
     ssd1306_spi_init_dma();
-    ssd1306_spi_set_dma_source((uint8_t*)ssd1306_init_commands, sizeof(ssd1306_init_commands));
+
+    ssd1306_command_buffer_t init_commands;
+
+    init_commands.first_command = (uint8_t*)ssd1306_init_commands;
+    init_commands.length = sizeof(ssd1306_init_commands);
+    init_commands.next = NULL;
+    init_commands.dc = 0u; // 0 for command
+
+    ssd1306_submit_command_buffer(&init_commands);
 }
 
-void ssd1306_commit_command_buffer(ssd1306_command_buffer_t *command_buffer){
-    if (command_buffer->dc)
+void ssd1306_submit_command_buffer(ssd1306_command_buffer_t *command_buffer){
+    // Wait for last command buffer list to complete
+    while (transmit_complete);
+    current_commands = *command_buffer;
+
+    if (current_commands.dc)
         _SSD1306_SET_DC_HIGH();
     else
         _SSD1306_SET_DC_LOW();
+
+    ssd1306_spi_set_dma_source((uint8_t*)current_commands.first_command, current_commands.length);
+    ssd1306_spi_dma_start_transmit();
+    transmit_complete = 1u;
+}
+
+void ssd1306_spi_dma_handle_irq() {
+    // Your need clear your flags before this function call manually
+    if (current_commands.next != NULL) {
+        current_commands = *current_commands.next;
+        ssd1306_spi_set_dma_source((uint8_t*)current_commands.first_command, current_commands.length);
+        ssd1306_spi_dma_start_transmit();
+    }
+    else {
+        // Clear flag
+        transmit_complete = 0u;
+    }
 }
 

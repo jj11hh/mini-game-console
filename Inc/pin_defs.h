@@ -41,13 +41,19 @@ static inline void ssd1306_spi_write_byte(uint8_t data) {
 
 static inline void ssd1306_spi_set_dma_source(uint8_t *source_addr, uint32_t length) {
     LL_DMA_SetMemoryAddress(DMA1, LL_DMA_CHANNEL_3, (uint32_t)source_addr);
+    LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_3, (uint32_t)(&SPI1->DR));
     LL_DMA_SetDataLength(DMA1, LL_DMA_CHANNEL_3, length);
     LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
 }
 
 static inline void ssd1306_spi_init_dma() {
     LL_DMA_SetPeriphAddress(DMA1, LL_DMA_CHANNEL_3, (uint32_t)(&SPI1->DR));
+}
+
+static inline void ssd1306_spi_dma_start_transmit() {
+    LL_DMA_EnableIT_TC(DMA1, LL_DMA_CHANNEL_3);
     LL_SPI_EnableDMAReq_TX(SPI1);
+    LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
 }
 
 #define _SSD1306_SET_RST_HIGH() ssd1306_set_rst_high()

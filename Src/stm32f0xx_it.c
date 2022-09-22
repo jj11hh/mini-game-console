@@ -22,6 +22,7 @@
 #include "stm32f0xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "ssd1306.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -146,6 +147,15 @@ void SysTick_Handler(void)
 void DMA1_Channel2_3_IRQHandler(void)
 {
   /* USER CODE BEGIN DMA1_Channel2_3_IRQn 0 */
+  // Clear flags
+    LL_DMA_ClearFlag_TC3(DMA1);
+    LL_DMA_ClearFlag_TE3(DMA1);
+
+    // Disable for now, but may enable later
+    LL_SPI_DisableDMAReq_TX(SPI1);
+    LL_DMA_DisableChannel(DMA1, LL_DMA_CHANNEL_3);
+
+    ssd1306_spi_dma_handle_irq();
 
   /* USER CODE END DMA1_Channel2_3_IRQn 0 */
 
