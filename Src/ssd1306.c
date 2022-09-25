@@ -10,7 +10,7 @@ static const uint8_t ssd1306_init_commands[] = {
 		// 0x00, // Set Column Start Address for Page Addressing Mode
 		// 0x10,
 
-		// 0x40, // Set Display Start Line
+		0x40, // Set Display Start Line
 
 		0x20, // Set Memory Addressing Mode
 		0x00, // Horizontal Addressing Mode
@@ -26,16 +26,21 @@ static const uint8_t ssd1306_init_commands[] = {
 		// 0xD9, // Set Pre-Charge Period
 		// 0x22,
 
-		// 0xDA,
-		// 0x12,
+		0xDA,
+		0x12,
+
+        0xA1,
 
 		// 0xDB,
 		// 0x20,
 
+        0xD3, // Set Display Offset
+        0x00, // 0
+
 		0x8D, // Set Charge Pump
 		0x14, // Enable Charge Pump
 
-		0xA5, // Entire Display ON
+		0xA4, // Entire Display ON
 		0xAF, // Display ON
 };
 
@@ -66,11 +71,16 @@ void ssd1306_init_device() {
     ssd1306_submit_command_buffer(&init_commands);
 }
 
+void ssd1306_wait_for_complete(){
+    while (transmit_complete);
+}
+
 void ssd1306_submit_command_buffer(ssd1306_command_buffer_t *command_buffer){
     // Wait for last command buffer list to complete
     while (transmit_complete);
     current_commands = *command_buffer;
 
+    ssd1306_wait_for_spi_complete();
     if (current_commands.dc)
         _SSD1306_SET_DC_HIGH();
     else
@@ -84,7 +94,17 @@ void ssd1306_submit_command_buffer(ssd1306_command_buffer_t *command_buffer){
 void ssd1306_spi_dma_handle_irq() {
     // Your need clear your flags before this function call manually
     if (current_commands.next != NULL) {
+        uint8_t dc = current_commands.dc;
         current_commands = *current_commands.next;
+
+        if (dc != current_commands.dc) {
+            ssd1306_wait_for_spi_complete();
+            if (current_commands.dc)
+                _SSD1306_SET_DC_HIGH();
+            else
+                _SSD1306_SET_DC_LOW();
+        }
+
         ssd1306_spi_set_dma_source((uint8_t*)current_commands.first_command, current_commands.length);
         ssd1306_spi_dma_start_transmit();
     }

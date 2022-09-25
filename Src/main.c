@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ssd1306.h"
+#include "assets.h"
 
 /* USER CODE END Includes */
 
@@ -96,20 +97,36 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Delay for a while for waiting for debugger
-  LL_mDelay(250);
+  LL_mDelay(20);
 
   // Initialize Display
   ssd1306_init_device();
 
-  uint8_t ff = 0;
-  uint8_t cmd_oled_on = 0xAF;
-  uint8_t cmd_oled_off= 0xAE;
+  uint8_t config_cmd[] = {
+          0xE3, // NOP
+          0x02, // Column Address: 0x02
+          0x10, // Column Address: 0x02
+          0xB0, // Page 0
+  };
 
-  ssd1306_command_buffer_t cmd;
-  cmd.dc = 0;
-  cmd.first_command = &cmd_oled_off;
-  cmd.length = 1;
-  cmd.next = NULL;
+  ssd1306_command_buffer_t cmd[2];
+  cmd[0].dc = 0;
+  cmd[0].first_command = (uint8_t*)config_cmd;
+  cmd[0].length = sizeof(config_cmd);
+  cmd[0].next = &cmd[1];
+
+  cmd[1].dc = 1;
+  cmd[1].first_command = (uint8_t*)font8x8;
+  cmd[1].length = 128;//sizeof(font8x8)-511;
+  cmd[1].next = NULL;
+
+  for (int p = 0; p < 8; ++p) {
+      ssd1306_submit_command_buffer(&cmd[0]);
+      // ssd1306_submit_command_buffer(&cmd[1]);
+      ssd1306_wait_for_complete();
+      config_cmd[3]++; // Page Increment
+      cmd[1].first_command += 128; // Next Page Data
+  }
 
   /* USER CODE END 2 */
 
@@ -118,12 +135,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    cmd.first_command = ff ? &cmd_oled_on : &cmd_oled_off;
-      ssd1306_submit_command_buffer(&cmd);
-    ff = !ff;
 
-    // Delay 200ms
-      LL_mDelay(200);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

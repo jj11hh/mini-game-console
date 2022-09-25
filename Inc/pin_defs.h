@@ -56,6 +56,11 @@ static inline void ssd1306_spi_dma_start_transmit() {
     LL_DMA_EnableChannel(DMA1, LL_DMA_CHANNEL_3);
 }
 
+static inline void ssd1306_wait_for_spi_complete() {
+    // Wait for SPI
+    while(LL_SPI_IsActiveFlag_BSY(SPI1));
+}
+
 #define _SSD1306_SET_RST_HIGH() ssd1306_set_rst_high()
 #define _SSD1306_SET_RST_LOW() ssd1306_set_rst_low()
 
