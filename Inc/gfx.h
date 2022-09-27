@@ -31,6 +31,9 @@ typedef struct gfx_frame_description_s {
 #define SPRITE_SIZE_32 2
 #define SPRITE_SIZE_64 3
 
+#define SP_ENCODE_POS(x) ((uint32_t)((x)+128))
+#define SP_DECODE_POS(x) ((int32_t)(x)-128)
+
 typedef struct gfx_sprite_info_s {
     uint32_t sprite_pos_x :8; // map [-128, 127] to [0, 255], 0 for the center of screen
     uint32_t sprite_pos_y :8; // map [-128, 127] to [0, 255], 0 for the center of screen
@@ -38,6 +41,8 @@ typedef struct gfx_sprite_info_s {
     uint32_t sprite_idx_y :4;
     uint32_t sprite_size_x :2;
     uint32_t sprite_size_y :2;
+    uint32_t invert_color :1;
+    uint32_t flip_x :1;
 } gfx_sprite_info_t;
 
 void gfx_begin_frame(gfx_frame_description_t *frame_desc);

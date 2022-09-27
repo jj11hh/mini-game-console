@@ -140,7 +140,19 @@ int main(void)
   frame_desc.sprite_table = (uint8_t*)font8x8;
   frame_desc.mask_table = (uint8_t*)font8x8;
 
-  uint32_t pos_xy = 0;
+  int32_t pos_x = 0;
+  int32_t pos_y = 0;
+
+  int32_t vol_x = 1;
+  int32_t vol_y = 1;
+
+    gfx_sprite_info_t sprite;
+    sprite.sprite_size_x = SPRITE_SIZE_16;
+    sprite.sprite_size_y = SPRITE_SIZE_16;
+    sprite.sprite_idx_x = 0;
+    sprite.sprite_idx_y = 4;
+    sprite.invert_color = 0;
+    sprite.flip_x = 1;
 
   /* USER CODE END 2 */
 
@@ -154,23 +166,25 @@ int main(void)
     // Demo: draw sprite
     gfx_begin_frame(&frame_desc);
 
-    gfx_sprite_info_t sprite;
-    sprite.sprite_size_x = SPRITE_SIZE_16;
-    sprite.sprite_size_y = SPRITE_SIZE_16;
-    sprite.sprite_idx_x = 0;
-    sprite.sprite_idx_y = 4;
-
-    sprite.sprite_pos_x = pos_xy;
-    sprite.sprite_pos_y = pos_xy;
+    sprite.sprite_pos_x = SP_ENCODE_POS(pos_x);
+    sprite.sprite_pos_y = SP_ENCODE_POS(pos_y);
 
     gfx_draw_sprite(sprite);
     gfx_end_frame();
 
-    pos_xy += 1;
-    pos_xy %= 64;
+    pos_x += vol_x;
+    pos_y += vol_y;
+
+    if (pos_x < 0 || pos_x + 16 > 128) {
+        vol_x = -vol_x;
+    }
+
+    if (pos_y < 0 || pos_y + 16 > 64) {
+        vol_y = -vol_y;
+    }
 
     // 33ms per frame
-    //LL_mDelay(16);
+    LL_mDelay(16);
   }
   /* USER CODE END 3 */
 }

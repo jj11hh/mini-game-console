@@ -40,25 +40,50 @@ static uint8_t control_cmd[] = {
 static ssd1306_command_buffer_t control_buffer;
 static ssd1306_command_buffer_t data_buffer;
 
-static void draw_upper(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
-                       const uint8_t *mask_addr, uint8_t y_offset){
+static inline void draw_upper(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
+                       const uint8_t *mask_addr, uint8_t y_offset, uint8_t invert_color){
     for (uint8_t i = 0; i < line_cnt; ++i) {
         uint8_t line_idx = dst_x_start + i;
         uint8_t dst = draw_page[line_idx];
         uint8_t src = sprite_addr[i] >> y_offset;
+        if (invert_color) src = ~src;
         uint8_t msk = mask_addr[i] >> y_offset;
-
         draw_page[line_idx] = (dst & ~msk) | (src & msk);
     }
 }
 
-static void draw_lower(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
-                       const uint8_t *mask_addr, uint8_t y_offset){
+static inline void draw_lower(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
+                       const uint8_t *mask_addr, uint8_t y_offset, uint8_t invert_color){
     for (uint8_t i = 0; i < line_cnt; ++i) {
         uint8_t line_idx = dst_x_start + i;
         uint8_t dst = draw_page[line_idx];
         uint8_t src = sprite_addr[i] << (8 - y_offset);
+        if (invert_color) src = ~src;
         uint8_t msk = mask_addr[i] << (8 - y_offset);
+
+        draw_page[line_idx] = (dst & ~msk) | (src & msk);
+    }
+}
+static inline void draw_upper_rtl(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
+                       const uint8_t *mask_addr, uint8_t y_offset, uint8_t invert_color){
+    for (uint8_t i = 0; i < line_cnt; ++i) {
+        uint8_t line_idx = dst_x_start + i;
+        uint8_t dst = draw_page[line_idx];
+        uint8_t src = sprite_addr[-i - 1] >> y_offset;
+        if (invert_color) src = ~src;
+        uint8_t msk = mask_addr[-i - 1] >> y_offset;
+        draw_page[line_idx] = (dst & ~msk) | (src & msk);
+    }
+}
+
+static inline void draw_lower_rtl(uint8_t dst_x_start, uint8_t line_cnt, const uint8_t *sprite_addr,
+                       const uint8_t *mask_addr, uint8_t y_offset, uint8_t invert_color){
+    for (uint8_t i = 0; i < line_cnt; ++i) {
+        uint8_t line_idx = dst_x_start + i;
+        uint8_t dst = draw_page[line_idx];
+        uint8_t src = sprite_addr[-i - 1] << (8 - y_offset);
+        if (invert_color) src = ~src;
+        uint8_t msk = mask_addr[-i - 1] << (8 - y_offset);
 
         draw_page[line_idx] = (dst & ~msk) | (src & msk);
     }
@@ -81,8 +106,8 @@ void gfx_end_frame() {
             int sprite_x_offset = sprite.sprite_idx_x * 8;
 
             // Position from the left-top
-            int x = (int)sprite.sprite_pos_x; // - 127 + (SCREEN_WIDTH / 2);
-            int y = (int)sprite.sprite_pos_y; // - 127 + (SCREEN_HEIGHT / 2);
+            int x = SP_DECODE_POS(sprite.sprite_pos_x);
+            int y = SP_DECODE_POS(sprite.sprite_pos_y);
 
             // If sprite is out of current page, cull it out
             if (x + sprite_width <= 0 || SCREEN_WIDTH <= x)
@@ -92,6 +117,7 @@ void gfx_end_frame() {
 
             int dst_x_start = MAX(x, 0);
             int dst_x_end = MIN(x + sprite_width, SCREEN_WIDTH);
+
             int src_x_start = MAX(-x, 0);
             // int src_x_end = MIN(sprite_width - src_x_start, dst_x_end - dst_x_start);
 
@@ -103,17 +129,41 @@ void gfx_end_frame() {
 
             if (y + sprite_height >= y_max) {
                 if (y_offset == 0) y_page -= 1;
-                uint32_t image_offset = (y_page + sprite_page) * table_width + src_x_start + sprite_x_offset;
-                uint8_t *sprite_addr = sprite_table + image_offset;
-                uint8_t *mask_addr = mask_table + image_offset;
-                draw_upper(dst_x_start, dst_x_end - dst_x_start, sprite_addr, mask_addr, y_offset);
+                if (!sprite.flip_x) {
+                    uint32_t image_offset = (y_page + sprite_page) * table_width + src_x_start + sprite_x_offset;
+                    uint8_t *sprite_addr = sprite_table + image_offset;
+                    uint8_t *mask_addr = mask_table + image_offset;
+                    draw_upper(dst_x_start, dst_x_end - dst_x_start,
+                               sprite_addr, mask_addr, y_offset, sprite.invert_color);
+                }
+                else {
+                    uint32_t image_offset = (y_page + sprite_page) * table_width + sprite_x_offset;
+                    image_offset += sprite_width - src_x_start;
+                    uint8_t *sprite_addr = sprite_table + image_offset;
+                    uint8_t *mask_addr = mask_table + image_offset;
+                    draw_upper_rtl(dst_x_start, dst_x_end - dst_x_start,
+                               sprite_addr, mask_addr,
+                               y_offset, sprite.invert_color);
+                }
             }
 
-            if (y < y_min && y_offset != 0) {
-                uint32_t image_offset = (y_page + sprite_page - 1) * table_width + src_x_start + sprite_x_offset;
-                uint8_t *sprite_addr = sprite_table + image_offset;
-                uint8_t *mask_addr = mask_table + image_offset;
-                draw_lower(dst_x_start, dst_x_end - dst_x_start, sprite_addr, mask_addr, y_offset);
+            if (y < y_min) {
+                if (!sprite.flip_x) {
+                    uint32_t image_offset = (y_page + sprite_page - 1) * table_width + src_x_start + sprite_x_offset;
+                    uint8_t *sprite_addr = sprite_table + image_offset;
+                    uint8_t *mask_addr = mask_table + image_offset;
+                    draw_lower(dst_x_start, dst_x_end - dst_x_start, sprite_addr, mask_addr, y_offset,
+                               sprite.invert_color);
+                }
+                else {
+                    uint32_t image_offset = (y_page + sprite_page - 1) * table_width + sprite_x_offset;
+                    image_offset += sprite_width - src_x_start;
+                    uint8_t *sprite_addr = sprite_table + image_offset;
+                    uint8_t *mask_addr = mask_table + image_offset;
+                    draw_lower_rtl(dst_x_start, dst_x_end - dst_x_start,
+                                   sprite_addr, mask_addr,
+                                   y_offset, sprite.invert_color);
+                }
             }
         }
 
