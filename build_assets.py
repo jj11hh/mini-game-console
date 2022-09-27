@@ -56,17 +56,36 @@ def concat_rows(rows):
 
     return acc
 
+class AssetPacker:
+    def __init__(self):
+        self._images = {}
+
+    def add_png(self, path_without_ext):
+        png_reader = PngReader(asset_path(path_without_ext + ".png"))
+        width, height, font8x8_img, info = png_reader.asRGB8()
+        codes = pack_img(concat_rows(font8x8_img), width, height, width // 4, height // 4)
+        self._images[path_without_ext] = codes
+
+    def generate_code(self, f):
+        f.write('#include "assets.h"\n'.encode("utf-8"))
+        f.write(b'\n')
+
+        for name, image in self._images.items():
+            f.write(array2c(image, name).encode("utf-8"))
+
+        f.write(b'\n')
+
+    def build(self):
+        with open(os.path.abspath("./Src/assets.c"), "wb") as f:
+            self.generate_code(f)
+
 
 def main():
     # load 8x8 ascii font
-    png_reader = PngReader(asset_path("font8x8.png"))
-    width, height, font8x8_img, info = png_reader.asRGB8()
-    codes = pack_img(concat_rows(font8x8_img), width, height, width // 4, height // 4)
-    with open(os.path.abspath("./Src/assets.c"), "wb") as f:
-        f.write('#include "assets.h"\n'.encode("utf-8"))
-        f.write(b'\n')
-        f.write(array2c(codes, "font8x8").encode("utf-8"))
-        f.write(b'\n')
+    packer = AssetPacker()
+    packer.add_png("font8x8")
+
+    packer.build()
 
 
 if __name__ == "__main__":
