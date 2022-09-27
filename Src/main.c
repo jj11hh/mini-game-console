@@ -24,7 +24,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <string.h>
 #include "ssd1306.h"
+#include "gfx.h"
 #include "assets.h"
 
 /* USER CODE END Includes */
@@ -106,7 +108,7 @@ int main(void)
           0xE3, // NOP
           0x02, // Column Address: 0x02
           0x10, // Column Address: 0x02
-          0xB0, // Page 0
+          0xB7, // Page 7
   };
 
   ssd1306_command_buffer_t cmd[2];
@@ -124,9 +126,21 @@ int main(void)
       ssd1306_submit_command_buffer(&cmd[0]);
       // ssd1306_submit_command_buffer(&cmd[1]);
       ssd1306_wait_for_complete();
-      config_cmd[3]++; // Page Increment
+      config_cmd[3]--; // Page Decrement
       cmd[1].first_command += 128; // Next Page Data
   }
+
+  LL_mDelay(500);
+
+  gfx_frame_description_t frame_desc;
+
+  memset(&frame_desc, 0, sizeof(frame_desc));
+
+  frame_desc.sprite_table_size = SPRITE_TABLE_SIZE_128;
+  frame_desc.sprite_table = (uint8_t*)font8x8;
+  frame_desc.mask_table = (uint8_t*)font8x8;
+
+  uint32_t pos_xy = 0;
 
   /* USER CODE END 2 */
 
@@ -135,8 +149,28 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
     /* USER CODE BEGIN 3 */
+
+    // Demo: draw sprite
+    gfx_begin_frame(&frame_desc);
+
+    gfx_sprite_info_t sprite;
+    sprite.sprite_size_x = SPRITE_SIZE_16;
+    sprite.sprite_size_y = SPRITE_SIZE_16;
+    sprite.sprite_idx_x = 0;
+    sprite.sprite_idx_y = 4;
+
+    sprite.sprite_pos_x = pos_xy;
+    sprite.sprite_pos_y = pos_xy;
+
+    gfx_draw_sprite(sprite);
+    gfx_end_frame();
+
+    pos_xy += 1;
+    pos_xy %= 64;
+
+    // 33ms per frame
+    //LL_mDelay(16);
   }
   /* USER CODE END 3 */
 }
