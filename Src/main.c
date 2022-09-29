@@ -140,19 +140,25 @@ int main(void)
   frame_desc.sprite_table = (uint8_t*)font8x8;
   frame_desc.mask_table = (uint8_t*)font8x8;
 
-  int32_t pos_x = 0;
-  int32_t pos_y = 0;
+  int32_t pos_x[2] = {0, 16};
+  int32_t pos_y[2] = {0, 30};
+  int32_t vol_x[2] = {1, -1};
+  int32_t vol_y[2] = {1, -1};
 
-  int32_t vol_x = 1;
-  int32_t vol_y = 1;
+    gfx_sprite_info_t sprite[2];
+    sprite[0].sprite_size_x = SPRITE_SIZE_16;
+    sprite[0].sprite_size_y = SPRITE_SIZE_16;
+    sprite[0].sprite_idx_x = 0;
+    sprite[0].sprite_idx_y = 4;
+    sprite[0].invert_color = 0;
+    sprite[0].flip_x = 1;
 
-    gfx_sprite_info_t sprite;
-    sprite.sprite_size_x = SPRITE_SIZE_16;
-    sprite.sprite_size_y = SPRITE_SIZE_16;
-    sprite.sprite_idx_x = 0;
-    sprite.sprite_idx_y = 4;
-    sprite.invert_color = 0;
-    sprite.flip_x = 1;
+    sprite[1].sprite_size_x = SPRITE_SIZE_16;
+    sprite[1].sprite_size_y = SPRITE_SIZE_16;
+    sprite[1].sprite_idx_x = 0;
+    sprite[1].sprite_idx_y = 4;
+    sprite[1].invert_color = 0;
+    sprite[1].flip_x = 0;
 
   /* USER CODE END 2 */
 
@@ -166,22 +172,26 @@ int main(void)
     // Demo: draw sprite
     gfx_begin_frame(&frame_desc);
 
-    sprite.sprite_pos_x = SP_ENCODE_POS(pos_x);
-    sprite.sprite_pos_y = SP_ENCODE_POS(pos_y);
+    for (int i = 0; i < 2; ++i) {
+        sprite[i].sprite_pos_x = SP_ENCODE_POS(pos_x[i]);
+        sprite[i].sprite_pos_y = SP_ENCODE_POS(pos_y[i]);
 
-    gfx_draw_sprite(sprite);
+        gfx_draw_sprite(sprite[i]);
+
+        pos_x[i] += vol_x[i];
+        pos_y[i] += vol_y[i];
+
+        if (pos_x[i] < -8 || pos_x[i] + 8 > 128) {
+            vol_x[i] = -vol_x[i];
+        }
+
+        if (pos_y[i] < -8 || pos_y[i] + 8 > 64) {
+            vol_y[i] = -vol_y[i];
+        }
+    }
+
     gfx_end_frame();
 
-    pos_x += vol_x;
-    pos_y += vol_y;
-
-    if (pos_x < 0 || pos_x + 16 > 128) {
-        vol_x = -vol_x;
-    }
-
-    if (pos_y < 0 || pos_y + 16 > 64) {
-        vol_y = -vol_y;
-    }
 
     // 33ms per frame
     LL_mDelay(16);

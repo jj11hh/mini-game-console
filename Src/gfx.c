@@ -111,9 +111,9 @@ void gfx_end_frame() {
 
             // If sprite is out of current page, cull it out
             if (x + sprite_width <= 0 || SCREEN_WIDTH <= x)
-                break;
+                continue;
             if (y + sprite_height <= y_min || y_max <= y)
-                break;
+                continue;
 
             int dst_x_start = MAX(x, 0);
             int dst_x_end = MIN(x + sprite_width, SCREEN_WIDTH);
