@@ -92,8 +92,8 @@ static inline void draw_lower_rtl(uint8_t dst_x_start, uint8_t line_cnt, const u
 static inline uint8_t* get_tile_data(uint8_t tile_id) {
     uint8_t *sprite_table = current_frame_desc->sprite_table;
     uint8_t page = tile_id >> 4;
-    uint8_t tile = tile_id & 0xFF;
-    return sprite_table + (64 << current_frame_desc->sprite_table_size) * page + tile;
+    uint8_t tile = tile_id & 0x0F;
+    return sprite_table + (64 << current_frame_desc->sprite_table_size) * page + tile * 8;
 }
 
 static void draw_bg(uint8_t *page_mem, uint8_t page_idx) {

@@ -132,14 +132,6 @@ int main(void)
 
   LL_mDelay(500);
 
-  gfx_frame_description_t frame_desc;
-
-  memset(&frame_desc, 0, sizeof(frame_desc));
-
-  frame_desc.sprite_table_size = SPRITE_TABLE_SIZE_128;
-  frame_desc.sprite_table = (uint8_t*)font8x8;
-  frame_desc.mask_table = (uint8_t*)font8x8;
-
   int32_t pos_x[2] = {0, 16};
   int32_t pos_y[2] = {0, 30};
   int32_t vol_x[2] = {1, -1};
@@ -160,6 +152,22 @@ int main(void)
     sprite[1].invert_color = 0;
     sprite[1].flip_x = 0;
 
+    gfx_frame_description_t frame_desc;
+    const uint8_t background[] = {
+            "frame_desc.sprite_table_size = S"
+            "frame_desc.sprite_table = (uint8"
+            "frame_desc.mask_table = (uint8_t"
+            "frame_desc.tile_map = (uint8_t*)"
+            "frame_desc.sprite_table_size = S"
+            "frame_desc.sprite_table = (uint8"
+            "frame_desc.mask_table = (uint8_t"
+            "frame_desc.tile_map = (uint8_t*)"
+            "frame_desc.sprite_table_size = S"
+            "frame_desc.sprite_table_size = S"
+    };
+
+    uint32_t x_offset = 0;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -170,6 +178,15 @@ int main(void)
     /* USER CODE BEGIN 3 */
 
     // Demo: draw sprite
+    memset(&frame_desc, 0, sizeof(frame_desc));
+    frame_desc.sprite_table_size = SPRITE_TABLE_SIZE_128;
+    frame_desc.sprite_table = (uint8_t*)font8x8;
+    frame_desc.mask_table = (uint8_t*)font8x8;
+    frame_desc.tile_map = (uint8_t*)background;
+    frame_desc.tile_map_width = 32;
+    frame_desc.tile_map_height = 10;
+    frame_desc.tile_map_x_offset = x_offset & 0x0F;
+
     gfx_begin_frame(&frame_desc);
 
     for (int i = 0; i < 2; ++i) {
@@ -195,6 +212,7 @@ int main(void)
 
     // 33ms per frame
     LL_mDelay(16);
+    x_offset ++;
   }
   /* USER CODE END 3 */
 }

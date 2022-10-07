@@ -50,9 +50,9 @@ def concat_rows(rows):
         return bytearray("")
 
     # extract red component from image
-    acc = rows[0][1::3]
+    acc = rows[0][1::4]
     for i in range(1, len(rows)):
-        acc.extend(rows[i][1::3])
+        acc.extend(rows[i][1::4])
 
     return acc
 
@@ -62,7 +62,7 @@ class AssetPacker:
 
     def add_png(self, path_without_ext):
         png_reader = PngReader(asset_path(path_without_ext + ".png"))
-        width, height, font8x8_img, info = png_reader.asRGB8()
+        width, height, font8x8_img, info = png_reader.asRGBA8()
         codes = pack_img(concat_rows(font8x8_img), width, height, width // 4, height // 4)
         self._images[path_without_ext] = codes
 
