@@ -89,13 +89,69 @@ static inline void draw_lower_rtl(uint8_t dst_x_start, uint8_t line_cnt, const u
     }
 }
 
+static inline uint8_t* get_tile_data(uint8_t tile_id) {
+    uint8_t *sprite_table = current_frame_desc->sprite_table;
+    uint8_t page = tile_id >> 4;
+    uint8_t tile = tile_id & 0xFF;
+    return sprite_table + (64 << current_frame_desc->sprite_table_size) * page + tile;
+}
+
+static void draw_bg(uint8_t *page_mem, uint8_t page_idx) {
+    uint8_t *tile_map = current_frame_desc->tile_map;
+    uint32_t w = current_frame_desc->tile_map_width;
+    uint32_t h = current_frame_desc->tile_map_height;
+    uint32_t offset_x = current_frame_desc->tile_map_x_offset;
+    uint32_t offset_y = current_frame_desc->tile_map_y_offset;
+
+    if (tile_map == NULL) {
+        // Clear background
+        for (uint32_t _x = 0; _x < SCREEN_WIDTH / 4; ++_x) *((uint32_t*)page_mem + _x) = 0u;
+        return;
+    }
+
+    // Draw Background Tiles
+    uint8_t *tile_start = tile_map + page_idx * w + (offset_y >> 3) * w + (offset_x >> 3);
+    offset_x &= 7u;
+    offset_y &= 7u;
+
+    uint32_t v_line = 0;
+
+    // Draw First Tile
+    if (offset_x > 0) {
+        uint8_t tile_id = *tile_start;
+        uint8_t *tile_data = get_tile_data(tile_id) + offset_x;
+        for (; v_line < 7 - offset_x; ++v_line) {
+            page_mem[v_line] = tile_data[v_line];
+        }
+
+        tile_start += 1;
+    }
+
+    // Draw Remain Tiles
+    for (; v_line < SCREEN_WIDTH; v_line += 8) {
+        uint8_t tile_id = tile_start[v_line / 8];
+        uint8_t *tile_data = get_tile_data(tile_id);
+        switch (SCREEN_WIDTH - v_line) {
+            default: page_mem[v_line + 7] = tile_data[7];
+            case 7:  page_mem[v_line + 6] = tile_data[6];
+            case 6:  page_mem[v_line + 5] = tile_data[5];
+            case 5:  page_mem[v_line + 4] = tile_data[4];
+            case 4:  page_mem[v_line + 3] = tile_data[3];
+            case 3:  page_mem[v_line + 2] = tile_data[2];
+            case 2:  page_mem[v_line + 1] = tile_data[1];
+            case 1:  page_mem[v_line + 0] = tile_data[0];
+        }
+    }
+
+}
+
 void gfx_end_frame() {
     for (uint8_t current_page = 0; current_page < SCREEN_HEIGHT / 8; ++current_page) {
         int y_min = current_page * 8;
         int y_max = y_min + 8;
 
-        // Clear page before drawing
-        for (uint32_t _x = 0; _x < SCREEN_WIDTH / 4; ++_x) *((uint32_t*)draw_page + _x) = 0u;
+        // Draw background on page memory
+        draw_bg(draw_page, current_page);
 
         for (uint8_t i = 0; i < n_sprites; ++i) {
             gfx_sprite_info_t sprite = sprite_buffer[i];
@@ -119,7 +175,6 @@ void gfx_end_frame() {
             int dst_x_end = MIN(x + sprite_width, SCREEN_WIDTH);
 
             int src_x_start = MAX(-x, 0);
-            // int src_x_end = MIN(sprite_width - src_x_start, dst_x_end - dst_x_start);
 
             uint8_t *sprite_table = current_frame_desc->sprite_table;
             uint8_t *mask_table = current_frame_desc->mask_table;

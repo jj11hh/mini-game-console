@@ -17,10 +17,10 @@ typedef struct gfx_frame_description_s {
     uint8_t *sprite_table;
     uint8_t *mask_table;
     uint8_t *tile_map;
-    uint32_t tile_map_x_offset :16;
-    uint32_t tile_map_y_offset :16;
-    uint32_t tile_map_width :8;
-    uint32_t tile_map_height :8;
+    uint32_t tile_map_x_offset :16; // In Pixel
+    uint32_t tile_map_y_offset :16; // In Pixel
+    uint32_t tile_map_width    :8;  // In Tile Number
+    uint32_t tile_map_height   :8;  // In Tile Number
     uint32_t sprite_table_size :1;
     uint32_t full_clear :1;
     uint32_t invert_color :1;
