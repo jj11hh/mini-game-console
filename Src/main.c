@@ -28,6 +28,7 @@
 #include "ssd1306.h"
 #include "gfx.h"
 #include "assets.h"
+#include "keypad.h"
 
 /* USER CODE END Includes */
 
@@ -153,18 +154,7 @@ int main(void)
     sprite[1].flip_x = 0;
 
     gfx_frame_description_t frame_desc;
-    const uint8_t background[] = {
-            "frame_desc.sprite_table_size = S"
-            "frame_desc.sprite_table = (uint8"
-            "frame_desc.mask_table = (uint8_t"
-            "frame_desc.tile_map = (uint8_t*)"
-            "frame_desc.sprite_table_size = S"
-            "frame_desc.sprite_table = (uint8"
-            "frame_desc.mask_table = (uint8_t"
-            "frame_desc.tile_map = (uint8_t*)"
-            "frame_desc.sprite_table_size = S"
-            "frame_desc.sprite_table_size = S"
-    };
+    uint8_t background[16 * 8];
 
     uint32_t x_offset = 0;
 
@@ -175,6 +165,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
+
     /* USER CODE BEGIN 3 */
 
     // Demo: draw sprite
@@ -183,9 +174,23 @@ int main(void)
     frame_desc.sprite_table = (uint8_t*)font8x8;
     frame_desc.mask_table = (uint8_t*)font8x8;
     frame_desc.tile_map = (uint8_t*)background;
-    frame_desc.tile_map_width = 32;
-    frame_desc.tile_map_height = 10;
-    frame_desc.tile_map_x_offset = x_offset & 0x0F;
+    frame_desc.tile_map_width = 16;
+    frame_desc.tile_map_height = 8;
+
+    // Update key state
+    update_key_state();
+
+    // Clear screen
+    memset(background, ' ', sizeof(background));
+
+    // Print text
+    for (int key = 0; key < 6; ++key) {
+        if (get_key_pressed() & (1u << key)) {
+            memcpy(background + 16 * key, "key pressed ", 12); // NOLINT(bugprone-not-null-terminated-result)
+            background[16 * key + 12] = '0' + key;
+        }
+    }
+
 
     gfx_begin_frame(&frame_desc);
 
@@ -208,7 +213,6 @@ int main(void)
     }
 
     gfx_end_frame();
-
 
     // 33ms per frame
     LL_mDelay(16);
