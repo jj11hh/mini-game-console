@@ -156,7 +156,14 @@ int main(void)
     gfx_frame_description_t frame_desc;
     uint8_t background[16 * 8];
 
-    uint32_t x_offset = 0;
+    struct {
+        uint8_t x_offset :4;
+        uint8_t y_offset :4;
+        uint8_t x_flag :1;
+        uint8_t y_flag :1;
+    } motion = {0, 0};
+
+    uint8_t frame_cnt = 0;
 
   /* USER CODE END 2 */
 
@@ -176,21 +183,40 @@ int main(void)
     frame_desc.tile_map = (uint8_t*)background;
     frame_desc.tile_map_width = 16;
     frame_desc.tile_map_height = 8;
+    frame_desc.tile_map_x_offset = motion.x_offset;
+    frame_desc.tile_map_y_offset = motion.y_offset;
+
+    if ((frame_cnt & 0x1Fu) == 0u) {
+        if (!motion.x_flag) motion.x_offset += 1;
+        else motion.x_offset -= 1;
+    }
+
+    if ((frame_cnt & 0xFu) == 0u) {
+        if (!motion.y_flag) motion.y_offset += 1;
+        else motion.y_offset -= 1;
+    }
+
+    frame_cnt ++;
+
+    if (motion.x_offset == 0 && motion.x_flag != 0) motion.x_flag = !motion.x_flag;
+    if (motion.x_offset == 0xF && motion.x_flag == 0) motion.x_flag = !motion.x_flag;
+    if (motion.y_offset == 0 && motion.y_flag != 0) motion.y_flag = !motion.y_flag;
+    if (motion.y_offset == 0xF && motion.y_flag == 0) motion.y_flag = !motion.y_flag;
 
     // Update key state
     update_key_state();
 
     // Clear screen
-    memset(background, ' ', sizeof(background));
+    memset(background, '*', sizeof(background));
+    uint8_t *start_line = background + 2 * 16;
 
     // Print text
     for (int key = 0; key < 6; ++key) {
         if (get_key_pressed() & (1u << key)) {
-            memcpy(background + 16 * key, "key pressed ", 12); // NOLINT(bugprone-not-null-terminated-result)
-            background[16 * key + 12] = '0' + key;
+            memcpy(start_line + 16 * key + 2, "key   pressed", 13); // NOLINT(bugprone-not-null-terminated-result)
+            start_line[16 * key + 4 + 2] = '0' + key;
         }
     }
-
 
     gfx_begin_frame(&frame_desc);
 
@@ -216,7 +242,6 @@ int main(void)
 
     // 33ms per frame
     LL_mDelay(16);
-    x_offset ++;
   }
   /* USER CODE END 3 */
 }

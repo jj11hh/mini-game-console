@@ -1,8 +1,10 @@
-#ifndef __GFX_H__
-#define __GFX_H__
+#ifndef GFX_H__
+#define GFX_H__
 
 #include <stdlib.h>
 #include <stdint.h>
+
+#define ALIGNED __attribute__((aligned(4)))
 
 #define SCREEN_WIDTH  128
 #define SCREEN_HEIGHT 64
@@ -49,4 +51,4 @@ void gfx_begin_frame(gfx_frame_description_t *frame_desc);
 void gfx_draw_sprite(gfx_sprite_info_t sprite);
 void gfx_end_frame();
 
-#endif // __GFX_H__
+#endif // GFX_H__

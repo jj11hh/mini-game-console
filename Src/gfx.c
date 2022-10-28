@@ -8,16 +8,17 @@
 static gfx_frame_description_t last_frame_desc;
 static gfx_frame_description_t *current_frame_desc;
 
-static uint16_t dirty_mask[SCREEN_HEIGHT / 8];
+static uint16_t dirty_mask[SCREEN_HEIGHT / 8] ALIGNED;
 
 // To save memory, we draw screen page by pages
-static uint8_t back_buffer[SCREEN_WIDTH];
-static uint8_t front_buffer[SCREEN_WIDTH];
+// Add some padding to end to avoid border check
+static uint8_t back_buffer[SCREEN_WIDTH + 8] ALIGNED;
+static uint8_t front_buffer[SCREEN_WIDTH + 8] ALIGNED;
 
 static uint8_t *draw_page;
 
 // Save sprites to memory and draw them later
-static gfx_sprite_info_t sprite_buffer[MAX_SPRITE_ON_SCREEN];
+static gfx_sprite_info_t sprite_buffer[MAX_SPRITE_ON_SCREEN] ALIGNED;
 static uint8_t n_sprites;
 
 void gfx_begin_frame(gfx_frame_description_t *frame_desc) {
@@ -116,33 +117,64 @@ static void draw_bg(uint8_t *page_mem, uint8_t page_idx) {
 
     uint32_t v_line = 0;
 
-    // Draw First Tile
-    if (offset_x > 0) {
-        uint8_t tile_id = *tile_start;
-        uint8_t *tile_data = get_tile_data(tile_id) + offset_x;
-        for (; v_line < 7 - offset_x; ++v_line) {
-            page_mem[v_line] = tile_data[v_line];
+    // A fast path to aligned tiles
+    if (offset_y == 0) {
+        // Draw First Tile
+        if (offset_x > 0) {
+            uint8_t *tile_data = get_tile_data(*tile_start) + offset_x;
+            for (; v_line < 7 - offset_x; ++v_line) {
+                page_mem[v_line] = tile_data[v_line];
+            }
+
+            tile_start += 1;
         }
 
-        tile_start += 1;
-    }
+        // Draw Remain Tiles
+        for (; v_line < SCREEN_WIDTH; v_line += 8) {
+            uint8_t *tile_data = get_tile_data(tile_start[v_line / 8]);
 
-    // Draw Remain Tiles
-    for (; v_line < SCREEN_WIDTH; v_line += 8) {
-        uint8_t tile_id = tile_start[v_line / 8];
-        uint8_t *tile_data = get_tile_data(tile_id);
-        switch (SCREEN_WIDTH - v_line) {
-            default: page_mem[v_line + 7] = tile_data[7];
-            case 7:  page_mem[v_line + 6] = tile_data[6];
-            case 6:  page_mem[v_line + 5] = tile_data[5];
-            case 5:  page_mem[v_line + 4] = tile_data[4];
-            case 4:  page_mem[v_line + 3] = tile_data[3];
-            case 3:  page_mem[v_line + 2] = tile_data[2];
-            case 2:  page_mem[v_line + 1] = tile_data[1];
-            case 1:  page_mem[v_line + 0] = tile_data[0];
+            page_mem[v_line + 7] = tile_data[7];
+            page_mem[v_line + 6] = tile_data[6];
+            page_mem[v_line + 5] = tile_data[5];
+            page_mem[v_line + 4] = tile_data[4];
+            page_mem[v_line + 3] = tile_data[3];
+            page_mem[v_line + 2] = tile_data[2];
+            page_mem[v_line + 1] = tile_data[1];
+            page_mem[v_line + 0] = tile_data[0];
         }
     }
+    // Non-aligned tiles
+    else {
+        uint8_t *tile_next_column = tile_start + w;
+        uint32_t inv_offset = 8 - offset_y;
 
+        // Draw First Tile
+        if (offset_x > 0) {
+            uint8_t *tile_data = get_tile_data(*tile_start) + offset_x;
+            uint8_t *tile_data_next = get_tile_data(*tile_next_column) + offset_x;
+            for (; v_line < 7 - offset_x; ++v_line) {
+                page_mem[v_line] = tile_data[v_line] << offset_y | tile_data_next[v_line] >> inv_offset;
+            }
+
+            tile_start += 1;
+            tile_next_column += 1;
+        }
+
+        // Draw Remain Tiles
+        for (; v_line < SCREEN_WIDTH; v_line += 8) {
+            uint8_t *tile_data = get_tile_data(tile_start[v_line / 8]);
+            uint8_t *tile_data_next = get_tile_data(tile_next_column[v_line / 8]);
+
+            page_mem[v_line + 7] = tile_data[7] << offset_y | tile_data_next[7] >> inv_offset;
+            page_mem[v_line + 6] = tile_data[6] << offset_y | tile_data_next[6] >> inv_offset;
+            page_mem[v_line + 5] = tile_data[5] << offset_y | tile_data_next[5] >> inv_offset;
+            page_mem[v_line + 4] = tile_data[4] << offset_y | tile_data_next[4] >> inv_offset;
+            page_mem[v_line + 3] = tile_data[3] << offset_y | tile_data_next[3] >> inv_offset;
+            page_mem[v_line + 2] = tile_data[2] << offset_y | tile_data_next[2] >> inv_offset;
+            page_mem[v_line + 1] = tile_data[1] << offset_y | tile_data_next[1] >> inv_offset;
+            page_mem[v_line + 0] = tile_data[0] << offset_y | tile_data_next[0] >> inv_offset;
+        }
+    }
 }
 
 void gfx_end_frame() {
